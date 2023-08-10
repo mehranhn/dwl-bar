@@ -8,8 +8,9 @@
 static const int show_bar = 1;
 static const int bar_top = 1;          /* Boolean value, non-zero is true. If not top then bottom */
 static const int status_on_active = 1; /* Display the status on active monitor only. If not then on all. */
-static const char *font = "Monospace 10";
-static const char *terminal[] = { "footclient", NULL };
+static const char *font = "Sans 10";
+static const char *terminal[] = { "alacritty", NULL };
+static const char *icon_theme = "Hicolor";
 
 /*
  * Colors:
@@ -52,6 +53,13 @@ static const Binding bindings[] = {
     { Click_Tag,         BTN_MIDDLE,    tag,          0,         {0} },
     { Click_Tag,         BTN_RIGHT,     toggle_view,  0,         {0} },
     { Click_Tag,         BTN_LEFT,      view,         0,         {0} },
+    { Click_Systray,     BTN_LEFT,      systray,      0,         {0} },
+    { Click_Systray,     BTN_MIDDLE,    systray,      0,         {0} },
+    { Click_Systray,     BTN_RIGHT,     systray,      0,         {0} },
+    { Click_Systray,     Scroll_Up,     systray,      0,         {0} },
+    { Click_Systray,     Scroll_Down,   systray,      0,         {0} },
+    { Click_Systray,     Scroll_Left,   systray,      0,         {0} },
+    { Click_Systray,     Scroll_Right,  systray,      0,         {0} },
 };
 
 #endif // CONFIG_H_

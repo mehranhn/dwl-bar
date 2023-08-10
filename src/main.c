@@ -4,6 +4,7 @@
 #include "event.h"
 #include "log.h"
 #include "render.h"
+#include "tray.h"
 #include "util.h"
 #include "main.h"
 #include "input.h"
@@ -29,6 +30,7 @@
 static void check_global(void *global, const char *name);
 static void check_globals(void);
 static void cleanup(void);
+static void dbus_in(int fd, short mask, void *data);
 static void display_in(int fd, short mask, void *data);
 static void fifo_handle(const char *line);
 static void fifo_in(int fd, short mask, void *data);
@@ -80,6 +82,7 @@ static struct wl_list seats; // struct Seat*
 static int self_pipe[2];
 struct zwlr_layer_shell_v1 *shell;
 struct wl_shm *shm;
+static struct Tray *tray;
 static int tagcount;
 static const struct xdg_wm_base_listener xdg_wm_base_listener = {
     .ping = xdg_wm_base_ping,
@@ -136,6 +139,18 @@ void cleanup(void) {
         seat_destroy(seat);
 
     wl_display_disconnect(display);
+}
+
+void dbus_in(int fd, short mask, void *data) {
+    if (mask & (POLLHUP | POLLERR)) {
+        running = 0;
+        return;
+    }
+
+    int return_value;
+    while((return_value = sd_bus_process(tray->bus, NULL)) > 0);
+    if (return_value < 0)
+        panic("dbus_in: sd_bus_process failed to process bus.");
 }
 
 void display_in(int fd, short mask, void *data) {
@@ -249,6 +264,7 @@ void monitor_initialize(struct Monitor *monitor) {
     monitor->hotspots = list_create(1);
     monitor->pipeline = pipeline_create();
     monitor->bar = bar_create(monitor->hotspots, monitor->pipeline);
+    tray_register_to_monitor(tray, monitor->hotspots, monitor->pipeline);
     if (!monitor->pipeline || !monitor->bar)
         panic("Failed to create a pipline or bar for a monitor");
     monitor_update(monitor);
@@ -392,6 +408,8 @@ void setup(void) {
     wl_list_init(&seats);
     wl_list_init(&monitors);
 
+    tray = tray_create();
+
     struct wl_registry *registry = wl_display_get_registry(display);
     wl_registry_add_listener(registry, &registry_listener, NULL);
     wl_display_roundtrip(display);
@@ -417,6 +435,7 @@ void setup(void) {
     events_add(events, display_fd, POLLIN, NULL, display_in);
     events_add(events, self_pipe[0], POLLIN, NULL, pipe_in);
     events_add(events, fifo_fd, POLLIN, NULL, fifo_in);
+    events_add(events, tray->bus_fd, POLLIN, NULL, dbus_in);
 }
 
 void sigaction_handler(int _) {
